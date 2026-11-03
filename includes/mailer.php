@@ -92,7 +92,6 @@ function send_status_email(array $rows): bool {
         $mail->Password = MAIL_PASS;
         $mail->Port     = MAIL_PORT;
         $mail->Timeout = 15;                                   // give up after 15 seconds, not 120
-        if (MAIL_PORT == 465) $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
         $mail->setFrom('no-reply@bobmart.com', 'Bobmart');
         $mail->addAddress($f['customer_email'], $f['customer_name']);
         $mail->isHTML(true);

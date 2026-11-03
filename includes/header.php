@@ -25,7 +25,7 @@ if (session_status() === PHP_SESSION_NONE) {
                 <p>Welcome back, <b><?= htmlspecialchars($_SESSION['admin_username'] ?? $_SESSION['name'] ?? 'Guest') ?></b></p>
             </div>
             <div>
-                <a href="/bobmart/user/logout.php" class="btn-submit" style="background: #f43f5e; border: none;">Logout</a>
+                <a href="/bobmart/users/logout.php" class="btn-submit" style="background: #f43f5e; border: none;">Logout</a>
             </div>
         </div>
 

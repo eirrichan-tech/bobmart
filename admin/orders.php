@@ -2,179 +2,103 @@
 session_start();
 include('../includes/auth.php');
 include('../includes/config.php');
-require_admin();                                   // customers are redirected with a message
+require_once '../includes/mailer.php';
+require_admin();                              // customers can't open this page
 
 if (!function_exists('e')) {
     function e($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 }
 
-$errors = [];
-$v = ['name' => '', 'email' => '', 'role' => 'customer'];
+/* ---------- Update status + send email ---------- */
+if (isset($_POST['update_status'])) {
+    $order_id = (int)($_POST['order_id'] ?? 0);
+    $new = $_POST['status'] ?? '';
 
-/* ---------- Row actions: deactivate, change role, delete (POST) ---------- */
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    $tid    = (int)($_POST['id'] ?? 0);
-    $action = $_POST['action'];
-
-    $sqls = [
-        'toggle_status' => "UPDATE users SET status = IF(status='active','deactivated','active') WHERE user_id = ?",
-        'make_admin'    => "UPDATE users SET role = 'admin'    WHERE user_id = ? AND status = 'active'",
-        'make_customer' => "UPDATE users SET role = 'customer' WHERE user_id = ? AND status = 'active'",
-        'delete'        => "DELETE FROM users WHERE user_id = ?",
-    ];
-
-    if ($tid === (int)$_SESSION['user_id']) {
-        $_SESSION['error'] = "You can't change your own account.";
-    } elseif (!isset($sqls[$action])) {
-        $_SESSION['error'] = "Unknown action.";
+    if (!in_array($new, ['Pending', 'Shipped', 'Delivered', 'Cancelled'], true)) {
+        $_SESSION['error'] = "Invalid status.";
     } else {
-        try {
-            $s = mysqli_prepare($conn, $sqls[$action]);
-            mysqli_stmt_bind_param($s, "i", $tid);
-            mysqli_stmt_execute($s);
-            if (mysqli_stmt_affected_rows($s) > 0) {
-                $_SESSION['success'] = "User updated.";
-            } else {
-                $_SESSION['error'] = "No change made. Roles can only be changed for active users.";
-            }
-        } catch (mysqli_sql_exception $ex) {
-            $_SESSION['error'] = "Could not complete that. A user with orders can't be deleted, so deactivate them instead.";
+        $u = mysqli_prepare($conn, "UPDATE orders SET status = ? WHERE order_id = ?");
+        mysqli_stmt_bind_param($u, "si", $new, $order_id);
+        mysqli_stmt_execute($u);
+
+        $q = mysqli_prepare($conn, "SELECT * FROM order_details_view WHERE order_id = ?");
+        mysqli_stmt_bind_param($q, "i", $order_id);
+        mysqli_stmt_execute($q);
+        $rows = mysqli_fetch_all(mysqli_stmt_get_result($q), MYSQLI_ASSOC);
+
+        if ($rows && send_status_email($rows)) {
+            $_SESSION['success'] = "Order #$order_id set to '$new' and the email with PDF receipt was sent via Mailtrap.";
+        } else {
+            $_SESSION['error'] = "Order #$order_id set to '$new', but the email failed: " . ($GLOBALS['mail_error'] ?? 'unknown error');
         }
     }
-    header("Location: manage_users.php");
+    header("Location: orders.php");
     exit;
 }
 
-/* ---------- Add a new user (PHP validation, prepared statements) ---------- */
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
-    $v['name']  = trim($_POST['name'] ?? '');
-    $v['email'] = trim($_POST['email'] ?? '');
-    $v['role']  = $_POST['role'] ?? 'customer';
-    $password   = $_POST['password'] ?? '';
-
-    if (strlen($v['name']) < 2 || strlen($v['name']) > 60) $errors['name'] = "Name must be 2 to 60 characters.";
-    if ($v['email'] === '') $errors['email'] = "Email is required.";
-    elseif (!filter_var($v['email'], FILTER_VALIDATE_EMAIL)) $errors['email'] = "Enter a valid email address.";
-    if (strlen($password) < 6) $errors['password'] = "Password must be at least 6 characters.";
-    if (!in_array($v['role'], ['customer', 'admin'], true)) $errors['role'] = "Choose a valid role.";
-
-    if (!isset($errors['email'])) {
-        $chk = mysqli_prepare($conn, "SELECT 1 FROM users WHERE email = ?");
-        mysqli_stmt_bind_param($chk, "s", $v['email']);
-        mysqli_stmt_execute($chk);
-        if (mysqli_fetch_assoc(mysqli_stmt_get_result($chk))) $errors['email'] = "That email already exists.";
-    }
-
-    if (!$errors) {
-        $hash = password_hash($password, PASSWORD_DEFAULT);
-        try {
-            $ins = mysqli_prepare($conn, "INSERT INTO users (name, email, password, role, status) VALUES (?, ?, ?, ?, 'active')");
-            mysqli_stmt_bind_param($ins, "ssss", $v['name'], $v['email'], $hash, $v['role']);
-            mysqli_stmt_execute($ins);
-            $_SESSION['success'] = "User added.";
-            header("Location: manage_users.php");
-            exit;
-        } catch (mysqli_sql_exception $ex) {
-            $errors['email'] = "Could not add user. Check that the email is unique.";
-        }
-    }
-}
-
-$users = mysqli_query($conn, "SELECT user_id, name, email, role, status FROM users ORDER BY user_id");
+/* ---------- List all orders, grouped with their items ---------- */
+$res = mysqli_query($conn, "SELECT * FROM order_details_view ORDER BY created_at DESC, order_id DESC");
+$orders = [];
+while ($r = mysqli_fetch_assoc($res)) $orders[$r['order_id']][] = $r;
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Users - Bobmart</title>
+    <title>Manage Orders - Bobmart</title>
     <link rel="stylesheet" href="../includes/estetik/style.css">
     <style>
-        .page-wrap{max-width:1100px;margin:20px auto;padding:0 16px}
         .msg-ok{color:#15803d;background:#dcfce7;padding:10px;border-radius:6px;margin-bottom:15px;font-size:14px}
         .msg-err{color:#be123c;background:#ffe4e6;padding:10px;border-radius:6px;margin-bottom:15px;font-size:14px}
-        .field-error{display:block;color:#f43f5e;font-size:12px;margin-top:3px;font-weight:600}
-        .dashboard-container .styled-table, .dashboard-container .styled-table td{color:#0f172a}
-        .dashboard-container .styled-table th{color:#0284c7}
-        .link-btn{background:none;border:none;color:#0284c7;font-weight:600;font-size:13px;cursor:pointer;padding:0;margin-right:10px}
-        .link-btn.danger{color:#f43f5e}
-        .add-box{background:#fff;padding:15px;margin-bottom:20px;border:1px solid #e2e8f0;border-radius:8px}
-        .add-box form{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start}
-        .add-box input,.add-box select{padding:8px;width:auto}
+        .dashboard-container .styled-table, .dashboard-container .styled-table td { color:#0f172a; }
+        .dashboard-container .styled-table th { color:#0284c7; }
+        .page-wrap{max-width:1100px;margin:20px auto;padding:0 16px}
     </style>
 </head>
 <body>
 <div class="page-wrap">
 <div class="dashboard-container">
-    <h2 class="header-title">User Management</h2>
+    <h2 class="header-title">Order Management</h2>
     <p class="header-subtitle"><a href="../item/index.php">&larr; Back to Inventory</a></p>
 
     <?php if (isset($_SESSION['success'])): ?><div class="msg-ok"><?= e($_SESSION['success']); unset($_SESSION['success']); ?></div><?php endif; ?>
     <?php if (isset($_SESSION['error'])): ?><div class="msg-err"><?= e($_SESSION['error']); unset($_SESSION['error']); ?></div><?php endif; ?>
 
-    <!-- CREATE -->
-    <div class="add-box">
-        <h3 style="margin-bottom:10px">Add New User</h3>
-        <form method="POST" action="manage_users.php" novalidate>
-            <input type="hidden" name="add_user" value="1">
-            <div>
-                <input type="text" name="name" placeholder="Full name" value="<?= e($v['name']) ?>">
-                <?php if (isset($errors['name'])): ?><small class="field-error"><?= e($errors['name']) ?></small><?php endif; ?>
-            </div>
-            <div>
-                <input type="text" name="email" placeholder="Email address" value="<?= e($v['email']) ?>">
-                <?php if (isset($errors['email'])): ?><small class="field-error"><?= e($errors['email']) ?></small><?php endif; ?>
-            </div>
-            <div>
-                <input type="password" name="password" placeholder="Password">
-                <?php if (isset($errors['password'])): ?><small class="field-error"><?= e($errors['password']) ?></small><?php endif; ?>
-            </div>
-            <div>
-                <select name="role">
-                    <option value="customer" <?= $v['role'] === 'customer' ? 'selected' : '' ?>>Customer</option>
-                    <option value="admin" <?= $v['role'] === 'admin' ? 'selected' : '' ?>>Admin</option>
-                </select>
-                <?php if (isset($errors['role'])): ?><small class="field-error"><?= e($errors['role']) ?></small><?php endif; ?>
-            </div>
-            <button type="submit" class="btn-primary">Add User</button>
-        </form>
-    </div>
-
-    <!-- READ / UPDATE / DELETE -->
     <div style="overflow-x:auto">
     <table class="styled-table">
         <thead>
-            <tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr>
+            <tr><th>Order</th><th>Customer</th><th>Items</th><th>Grand Total</th><th>Status</th><th>Date</th><th>Update</th></tr>
         </thead>
         <tbody>
-        <?php while ($u = mysqli_fetch_assoc($users)): ?>
+        <?php if (!$orders): ?>
+            <tr><td colspan="7" style="text-align:center">No orders yet.</td></tr>
+        <?php endif; ?>
+        <?php foreach ($orders as $oid => $lines): $f = $lines[0]; ?>
             <tr>
-                <td>#<?= (int)$u['user_id'] ?></td>
-                <td><?= e($u['name']) ?></td>
-                <td><?= e($u['email']) ?></td>
-                <td><b><?= e($u['role']) ?></b></td>
-                <td><?= e($u['status']) ?></td>
+                <td>#<?= (int)$oid ?></td>
+                <td><?= e($f['customer_name']) ?><br><small><?= e($f['customer_email']) ?></small></td>
                 <td>
-                    <?php if ((int)$u['user_id'] !== (int)$_SESSION['user_id']): ?>
-                        <form method="POST" action="manage_users.php" style="display:inline">
-                            <input type="hidden" name="id" value="<?= (int)$u['user_id'] ?>">
-                            <button class="link-btn" name="action" value="toggle_status">
-                                <?= $u['status'] === 'active' ? 'Deactivate' : 'Activate' ?>
-                            </button>
-                            <?php if ($u['role'] === 'customer'): ?>
-                                <button class="link-btn" name="action" value="make_admin">Make Admin</button>
-                            <?php else: ?>
-                                <button class="link-btn" name="action" value="make_customer">Make Customer</button>
-                            <?php endif; ?>
-                            <button class="link-btn danger" name="action" value="delete"
-                                    onclick="return confirm('Permanently delete this user?');">Delete</button>
-                        </form>
-                    <?php else: ?>
-                        <small>(you)</small>
-                    <?php endif; ?>
+                    <?php foreach ($lines as $l): ?>
+                        <?= e(m_name($l)) ?> &times; <?= (int)$l['quantity'] ?> = $<?= number_format(m_sub($l), 2) ?><br>
+                    <?php endforeach; ?>
+                </td>
+                <td><b>$<?= number_format(m_total($lines), 2) ?></b></td>
+                <td><b><?= e($f['status']) ?></b></td>
+                <td><?= e($f['created_at']) ?></td>
+                <td>
+                    <form action="orders.php" method="POST" style="display:flex;gap:6px">
+                        <input type="hidden" name="order_id" value="<?= (int)$oid ?>">
+                        <select name="status" style="padding:4px;font-size:12px">
+                            <?php foreach (['Pending','Shipped','Delivered','Cancelled'] as $s): ?>
+                                <option value="<?= $s ?>" <?= $f['status'] === $s ? 'selected' : '' ?>><?= $s ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <button type="submit" name="update_status" class="btn-primary" style="padding:4px 10px;font-size:12px">Update</button>
+                    </form>
                 </td>
             </tr>
-        <?php endwhile; ?>
+        <?php endforeach; ?>
         </tbody>
     </table>
     </div>

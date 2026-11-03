@@ -1,11 +1,20 @@
 <?php
 function e($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
-// MP4 regex: masks whole bad words, case-insensitive
-function filterFoulWords($text) {
-    $bad = ['trash', 'scam', 'horrible', 'fake', 'badword'];
-    $pattern = '/\b(' . implode('|', array_map('preg_quote', $bad)) . ')\b/i';
-    return preg_replace_callback($pattern, fn($m) => str_repeat('*', strlen($m[0])), $text);
+// MP4: bad-word filter using ONE regex pattern (no array)
+function filterFoulWords(string $text): string {
+    $pattern = '/\b('
+        . 'scam(s|mer|mers|med|ming)?|fake(s|d)?|fraud(s|ster)?|counterfeit|bootleg|knock-?off|rip-?off|'
+        . 'trash(y)?|garbage|junk|worthless|useless|horrible|'
+        . 'f[u*@]ck(s|ed|er|ers|ing)?|sh[i1!]t(s|ty|ting)?|b[i1!]tch(es|y)?|bastards?|a[s$]{2}holes?|dick(head)?s?|'
+        . 'crap(py)?|damn(ed|it)?|piss(ed)?|slut(s|ty)?|whores?|idiots?|stupid|dumb(ass)?|moron(s|ic)?|jerks?|'
+        . 'puta|put(a|ang)\s*ina(\s*mo)?|tangina|tang\s*ina|gago|gaga|tanga|bobo|ulol|tarantado|siraulo|'
+        . 'leche|lintik|hayop|bwisit|buwisit|pakyu|pucha|punyeta|inutil|walanghiya'
+        . ')\b/i';
+
+    return preg_replace_callback($pattern, function ($m) {
+        return str_repeat('*', strlen($m[0]));     // asterisks, same length as the word
+    }, $text);
 }
 
 function item_image(int $id, ?string $dbPath = null): string {
