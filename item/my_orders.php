@@ -9,6 +9,7 @@ foreach (mysqli_fetch_all(mysqli_stmt_get_result($st), MYSQLI_ASSOC) as $r) $ord
 include('../includes/header.php');
 ?>
 <div class="dashboard-container">
+  <a href="shop.php" class="back-btn">&larr; Back to Shop</a>
   <h2 class="header-title">My Orders</h2>
   <?php if (!$orders): ?><p style="text-align:center">No orders yet.</p><?php endif; ?>
   <?php foreach ($orders as $oid => $lines): $f = $lines[0]; ?>

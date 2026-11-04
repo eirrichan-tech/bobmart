@@ -9,8 +9,15 @@ if (!$rows) { $_SESSION['error'] = "Your cart is empty."; header("Location: shop
 $grand = array_sum(array_column($rows, 'subtotal'));
 $error = ''; $address = '';
 
+// NEW: load the customer's saved address so the form is pre-filled
+$ad = mysqli_prepare($conn, "SELECT address FROM users WHERE id = ?");
+mysqli_stmt_bind_param($ad, "i", $_SESSION['user_id']);
+mysqli_stmt_execute($ad);
+$saved = mysqli_fetch_assoc(mysqli_stmt_get_result($ad));
+$address = $saved['address'] ?? '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $address = trim($_POST['address'] ?? '');
+    $address = trim($_POST['address'] ?? '');   // whatever they typed overrides the saved one
     if (strlen($address) < 10) {
         $error = "Please enter a complete shipping address (at least 10 characters).";
     } else {
@@ -38,6 +45,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 mysqli_stmt_bind_param($oi, "iiid", $order_id, $iid, $q, $pr); mysqli_stmt_execute($oi);
                 mysqli_stmt_bind_param($us, "iii", $q, $iid, $q); mysqli_stmt_execute($us);
             }
+
+            // NEW (optional): older accounts with no saved address get this one saved automatically
+            $sv = mysqli_prepare($conn, "UPDATE users SET address = ? WHERE id = ? AND address = ''");
+            mysqli_stmt_bind_param($sv, "si", $address, $uid); mysqli_stmt_execute($sv);
+
             mysqli_commit($conn);
             unset($_SESSION['cart']);
             $_SESSION['success'] = "Order #$order_id placed successfully!";
@@ -51,6 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 include('../includes/header.php');
 ?>
 <div class="card-container" style="max-width:600px;margin:auto">
+  <a href="view_cart.php" class="back-btn">&larr; Back to Cart</a>
   <h2 class="header-title">Checkout</h2>
   <?php if ($error): ?><p style="color:#f43f5e"><?= e($error) ?></p><?php endif; ?>
   <table class="styled-table">
@@ -62,6 +75,7 @@ include('../includes/header.php');
   <form method="POST" novalidate>
     <label>Shipping Address</label>
     <textarea name="address" rows="3"><?= e($address) ?></textarea>
+    <p style="font-size:12px;color:#64748b">Saved from your profile. You can edit it for this order.</p>
     <p style="font-size:13px">Payment: Cash on Delivery</p>
     <button class="btn-primary" style="width:100%">Place Order</button>
   </form>

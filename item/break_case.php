@@ -1,7 +1,7 @@
 <?php
 session_start();
 include('../includes/auth.php'); include('../includes/config.php');
-require_admin();
+require_role(['inventory_staff']);
 $id = (int)($_GET['id'] ?? 0);
 $st = mysqli_prepare($conn, "UPDATE stock s JOIN items i ON i.id=s.item_id
     SET s.stock_cases = s.stock_cases - 1, s.quantity = s.quantity + i.boxes_per_case

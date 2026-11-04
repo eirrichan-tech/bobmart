@@ -54,7 +54,7 @@ head("Code rules");
 function src($f) { $p = __DIR__ . '/' . $f; return file_exists($p) ? file_get_contents($p) : null; }
 foreach (['item/index.php','item/create.php','item/edit.php','item/delete.php','item/break_case.php','admin/orders.php','admin/manage_users.php'] as $f) {
     $s = src($f); if ($s === null) continue;
-    ok(strpos($s, 'require_admin') !== false, "MP3: $f is protected by require_admin()");
+    ok((strpos($s, 'require_admin') !== false || strpos($s, 'require_role') !== false), "MP3: $f is protected by require_admin()/require_role()");
 }
 foreach (['users/login.php','admin/login.php','users/register.php','item/create.php','item/edit.php'] as $f) {
     $s = src($f); if ($s === null) { ok(false, "MP5: $f is missing"); continue; }

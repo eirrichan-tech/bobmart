@@ -11,20 +11,31 @@ if (!function_exists('e')) {
 $errors = [];
 $v = ['name' => '', 'email' => '', 'role' => 'customer'];
 
-/* ---------- Row actions: deactivate, change role, delete (POST) ---------- */
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $tid    = (int)($_POST['id'] ?? 0);
     $action = $_POST['action'];
 
     $sqls = [
         'toggle_status' => "UPDATE users SET status = IF(status='active','deactivated','active') WHERE id = ?",
-        'make_admin'    => "UPDATE users SET role = 'admin'    WHERE id = ? AND status = 'active'",
-        'make_customer' => "UPDATE users SET role = 'customer' WHERE id = ? AND status = 'active'",
         'delete'        => "DELETE FROM users WHERE id = ?",
     ];
 
     if ($tid === (int)$_SESSION['user_id']) {
         $_SESSION['error'] = "You can't change your own account.";
+    } elseif ($action === 'change_role') {
+        // Customers are locked. Only staff/admin accounts can move between the staff roles.
+        $new = $_POST['new_role'] ?? '';
+        if (!in_array($new, ['admin', 'inventory_staff', 'order_staff'], true)) {
+            $_SESSION['error'] = "Choose a valid staff role.";
+        } else {
+            $s = mysqli_prepare($conn, "UPDATE users SET role = ? WHERE id = ? AND status = 'active' AND role <> 'customer'");
+            mysqli_stmt_bind_param($s, "si", $new, $tid);
+            mysqli_stmt_execute($s);
+            $_SESSION[mysqli_stmt_affected_rows($s) > 0 ? 'success' : 'error'] = mysqli_stmt_affected_rows($s) > 0
+                ? "Role updated."
+                : "No change made. Customer roles are locked, and only active staff roles can be changed.";
+        }
     } elseif (!isset($sqls[$action])) {
         $_SESSION['error'] = "Unknown action.";
     } else {
@@ -45,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     exit;
 }
 
-/* ---------- Add a new user (PHP validation, prepared statements) ---------- */
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
     $v['name']  = trim($_POST['name'] ?? '');
     $v['email'] = trim($_POST['email'] ?? '');
@@ -56,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
     if ($v['email'] === '') $errors['email'] = "Email is required.";
     elseif (!filter_var($v['email'], FILTER_VALIDATE_EMAIL)) $errors['email'] = "Enter a valid email address.";
     if (strlen($password) < 6) $errors['password'] = "Password must be at least 6 characters.";
-    if (!in_array($v['role'], ['customer', 'admin'], true)) $errors['role'] = "Choose a valid role.";
+    if (!in_array($v['role'], ['customer', 'inventory_staff', 'order_staff', 'admin'], true)) $errors['role'] = "Choose a valid role.";
 
     if (!isset($errors['email'])) {
         $chk = mysqli_prepare($conn, "SELECT 1 FROM users WHERE email = ?");
@@ -82,16 +93,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
 
 // "id AS user_id" so the rest of the page can keep using $u['user_id']
 $users = mysqli_query($conn, "SELECT id AS user_id, name, email, role, status FROM users ORDER BY id");
+include('../includes/header.php');
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Users - Bobmart</title>
-    <link rel="stylesheet" href="../includes/estetik/style.css">
-    <style>
-        .page-wrap{max-width:1100px;margin:20px auto;padding:0 16px}
+<style>
         .msg-ok{color:#15803d;background:#dcfce7;padding:10px;border-radius:6px;margin-bottom:15px;font-size:14px}
         .msg-err{color:#be123c;background:#ffe4e6;padding:10px;border-radius:6px;margin-bottom:15px;font-size:14px}
         .field-error{display:block;color:#f43f5e;font-size:12px;margin-top:3px;font-weight:600}
@@ -103,18 +107,16 @@ $users = mysqli_query($conn, "SELECT id AS user_id, name, email, role, status FR
         .add-box form{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start}
         .add-box input,.add-box select{padding:8px;width:auto}
     </style>
-</head>
-<body>
-<div class="page-wrap">
 <div class="dashboard-container">
     <h2 class="header-title">User Management</h2>
-    <p class="header-subtitle"><a href="../item/index.php">&larr; Back to Inventory</a></p>
+    <div class="back-row"><a href="../item/index.php" class="back-btn">&larr; Back to Inventory</a><a href="orders.php" class="back-btn">Orders</a><a href="../item/shop.php" class="back-btn">View Shop</a></div>
 
     <?php if (isset($_SESSION['success'])): ?><div class="msg-ok"><?= e($_SESSION['success']); unset($_SESSION['success']); ?></div><?php endif; ?>
     <?php if (isset($_SESSION['error'])): ?><div class="msg-err"><?= e($_SESSION['error']); unset($_SESSION['error']); ?></div><?php endif; ?>
 
     <div class="add-box">
-        <h3 style="margin-bottom:10px">Add New User</h3>
+        <h3 style="margin-bottom:4px">Add New User</h3>
+        <p style="font-size:12px;color:#64748b;margin-bottom:10px">Accounts created on the public Register page are always customers and their role is locked. Staff accounts are created here.</p>
         <form method="POST" action="manage_users.php" novalidate>
             <input type="hidden" name="add_user" value="1">
             <div>
@@ -132,6 +134,8 @@ $users = mysqli_query($conn, "SELECT id AS user_id, name, email, role, status FR
             <div>
                 <select name="role">
                     <option value="customer" <?= $v['role'] === 'customer' ? 'selected' : '' ?>>Customer</option>
+                    <option value="inventory_staff" <?= $v['role'] === 'inventory_staff' ? 'selected' : '' ?>>Inventory Staff</option>
+                    <option value="order_staff" <?= $v['role'] === 'order_staff' ? 'selected' : '' ?>>Order Staff</option>
                     <option value="admin" <?= $v['role'] === 'admin' ? 'selected' : '' ?>>Admin</option>
                 </select>
                 <?php if (isset($errors['role'])): ?><small class="field-error"><?= e($errors['role']) ?></small><?php endif; ?>
@@ -151,7 +155,7 @@ $users = mysqli_query($conn, "SELECT id AS user_id, name, email, role, status FR
                 <td>#<?= (int)$u['user_id'] ?></td>
                 <td><?= e($u['name']) ?></td>
                 <td><?= e($u['email']) ?></td>
-                <td><b><?= e($u['role']) ?></b></td>
+                <td><b><?= e($u['role']) ?></b><?= $u['role'] === 'customer' ? ' <small>(locked)</small>' : '' ?></td>
                 <td><?= e($u['status']) ?></td>
                 <td>
                     <?php if ((int)$u['user_id'] !== (int)$_SESSION['user_id']): ?>
@@ -160,10 +164,13 @@ $users = mysqli_query($conn, "SELECT id AS user_id, name, email, role, status FR
                             <button class="link-btn" name="action" value="toggle_status">
                                 <?= $u['status'] === 'active' ? 'Deactivate' : 'Activate' ?>
                             </button>
-                            <?php if ($u['role'] === 'customer'): ?>
-                                <button class="link-btn" name="action" value="make_admin">Make Admin</button>
-                            <?php else: ?>
-                                <button class="link-btn" name="action" value="make_customer">Make Customer</button>
+                            <?php if ($u['role'] !== 'customer'): ?>
+                                <select name="new_role" style="width:auto;padding:4px;font-size:12px">
+                                    <?php foreach (['inventory_staff' => 'Inventory Staff', 'order_staff' => 'Order Staff', 'admin' => 'Admin'] as $val => $label): ?>
+                                        <option value="<?= $val ?>" <?= $u['role'] === $val ? 'selected' : '' ?>><?= $label ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <button class="link-btn" name="action" value="change_role">Save Role</button>
                             <?php endif; ?>
                             <button class="link-btn danger" name="action" value="delete"
                                     onclick="return confirm('Permanently delete this user?');">Delete</button>
@@ -178,6 +185,4 @@ $users = mysqli_query($conn, "SELECT id AS user_id, name, email, role, status FR
     </table>
     </div>
 </div>
-</div>
-</body>
-</html>
+<?php include('../includes/footer.php'); ?>

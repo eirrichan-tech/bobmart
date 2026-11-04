@@ -9,7 +9,8 @@ if (!function_exists('e')) {
 }
 
 $errors = [];
-$v = ['name' => '', 'email' => ''];
+$v = ['name' => '', 'email' => '', 'address' => ''];
+$v['address'] = trim($_POST['address'] ?? '');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $v['name']  = trim($_POST['name'] ?? '');
@@ -25,6 +26,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors['email'] = "Email is required.";
     } elseif (!filter_var($v['email'], FILTER_VALIDATE_EMAIL)) {
         $errors['email'] = "Enter a valid email address.";
+    }
+    if (strlen($v['address']) < 10) {
+    $errors['address'] = "Please enter a complete address (at least 10 characters).";
     }
     if (strlen($password) < 6) {
         $errors['password'] = "Password must be at least 6 characters.";
@@ -59,8 +63,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$errors) {
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
         try {
-            $stmt = mysqli_prepare($conn, "INSERT INTO users (email, password, name, role, profile_img, status) VALUES (?, ?, ?, 'customer', ?, 'active')");
-            mysqli_stmt_bind_param($stmt, "ssss", $v['email'], $hashed_password, $v['name'], $profile_img);
+            $stmt = mysqli_prepare($conn, "INSERT INTO users (email, password, name, address, role, profile_img, status) VALUES (?, ?, ?, ?, 'customer', ?, 'active')");
+            mysqli_stmt_bind_param($stmt, "sssss", $v['email'], $hashed_password, $v['name'], $v['address'], $profile_img);
             mysqli_stmt_execute($stmt);
             $_SESSION['success'] = "Registration successful! Please log in.";
             header("Location: login.php");
@@ -112,6 +116,12 @@ $errStyle = 'color:#f43f5e; display:block; margin-top:5px; font-size:12px; font-
             </div>
 
             <div class="form-group" style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 500;">Shipping Address</label>
+                <textarea name="address" rows="2" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;"><?= e($v['address']) ?></textarea>
+                <?php if (isset($errors['address'])): ?><small style="<?= $errStyle ?>"><?= e($errors['address']) ?></small><?php endif; ?>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 5px; font-weight: 500;">Password</label>
                 <input type="password" name="password" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
                 <?php if (isset($errors['password'])): ?><small style="<?= $errStyle ?>"><?= e($errors['password']) ?></small><?php endif; ?>
@@ -135,6 +145,7 @@ $errStyle = 'color:#f43f5e; display:block; margin-top:5px; font-size:12px; font-
         <div style="text-align: center; margin-top: 20px;">
             <a href="login.php" style="color: #38bdf8; text-decoration: none; font-size: 14px;">Already have an account? Sign in here</a>
         </div>
+        <div style="text-align: center; margin-top: 12px;"><a href="/bobmart/item/shop.php" style="color: #38bdf8; text-decoration: none; font-size: 14px;">&larr; Back to Shop</a></div>
     </div>
 </body>
 </html>

@@ -1,7 +1,7 @@
 <?php
 session_start();
 include('../includes/auth.php');
-require_admin();
+require_role(['inventory_staff']);
 include('../includes/config.php');
 
 $id = $_GET['id'] ?? null;

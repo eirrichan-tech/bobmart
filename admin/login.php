@@ -1,7 +1,8 @@
 <?php
 session_start();
 include('../includes/config.php');
-$error = $_SESSION['error'] ?? ''; unset($_SESSION['error']);   // shows "Please log in..."
+include_once('../includes/auth.php');
+$error = $_SESSION['error'] ?? ''; unset($_SESSION['error']);
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -12,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($password === '') $errors['password'] = "Password is required.";
 
     if (!$errors) {
-        // FIXED: Changed user_id to id
+        
         $stmt = mysqli_prepare($conn, "SELECT id, name, email, password, role, status FROM users WHERE email = ?");
         mysqli_stmt_bind_param($stmt, "s", $email);
         mysqli_stmt_execute($stmt);
@@ -27,11 +28,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['name']    = $user['name'];
             $_SESSION['email']   = $user['email'];
             $_SESSION['role']    = $user['role'];
-            header("Location: " . ($user['role'] === 'admin' ? "/bobmart/item/index.php" : "/bobmart/item/shop.php"));
+            header("Location: " . role_home($user['role']));
             exit;
         }
     }
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -75,6 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
     <button type="submit" class="btn-primary" style="width: 100%; padding: 12px; border: none; border-radius: 6px; font-weight: bold; background: #38bdf8; color: #0f172a; cursor: pointer;">Login as Admin</button>
 </form>
+        <div style="text-align: center; margin-top: 12px;"><a href="/bobmart/item/shop.php" style="color: #38bdf8; text-decoration: none; font-size: 14px;">&larr; Back to Shop</a></div>
     </div>
 </body>
 </html>

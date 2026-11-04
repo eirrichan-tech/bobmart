@@ -7,6 +7,7 @@ $grand = array_sum(array_column($rows, 'subtotal'));
 include('../includes/header.php');
 ?>
 <div class="dashboard-container">
+  <a href="shop.php" class="back-btn">&larr; Continue Shopping</a>
   <h2 class="header-title">My Cart</h2>
   <?php if (!$rows): ?>
     <p style="text-align:center">Your cart is empty. <a href="shop.php">Continue shopping</a></p>

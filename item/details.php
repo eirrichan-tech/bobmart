@@ -56,6 +56,7 @@ $reviews = mysqli_stmt_get_result($rv);
 include('../includes/header.php');
 ?>
 <div class="card-container" style="max-width:800px;margin:auto">
+  <a href="shop.php" class="back-btn">&larr; Back to Shop</a>
   <!-- gallery (MP1 view multiple photos) -->
   <?php if ($images): ?>
     <img id="mainImg" src="/bobmart/<?= e($images[0]['img_path']) ?>" style="width:100%;max-height:380px;object-fit:contain;border-radius:12px">

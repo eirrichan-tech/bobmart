@@ -2,7 +2,7 @@
 session_start();
 include('../includes/auth.php');
 include('../includes/config.php');
-require_admin();
+require_role(['inventory_staff']);
 include('../includes/header.php');
 
 $sql = "SELECT i.*, s.quantity, s.stock_cases FROM items i JOIN stock s ON i.id = s.item_id";

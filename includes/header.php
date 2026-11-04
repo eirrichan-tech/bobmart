@@ -38,10 +38,15 @@ if (session_status() === PHP_SESSION_NONE) {
     <a href="/bobmart/item/view_cart.php">Cart (<?= array_sum($_SESSION['cart'] ?? []) ?>)</a>
     <a href="/bobmart/item/my_orders.php">My Orders</a>
     <a href="/bobmart/users/profile.php">My Profile</a>
-    <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
+    <?php $role = $_SESSION['role'] ?? ''; ?>
+    <?php if (in_array($role, ['admin', 'inventory_staff'], true)): ?>
       <a href="/bobmart/item/index.php">Inventory</a>
       <a href="/bobmart/item/create.php">Add Product</a>
+    <?php endif; ?>
+    <?php if (in_array($role, ['admin', 'order_staff'], true)): ?>
       <a href="/bobmart/admin/orders.php">Orders</a>
+    <?php endif; ?>
+    <?php if ($role === 'admin'): ?>
       <a href="/bobmart/admin/manage_users.php">Users</a>
     <?php endif; ?>
     <a href="/bobmart/users/logout.php">Logout</a>

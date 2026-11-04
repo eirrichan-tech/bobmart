@@ -3,7 +3,7 @@ session_start();
 include('../includes/auth.php');
 include('../includes/config.php');
 include('../includes/functions.php');
-require_admin();
+require_role(['inventory_staff']);
 
 $errors = []; 
 $v = [

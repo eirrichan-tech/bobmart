@@ -1,6 +1,7 @@
 <?php
 session_start();
 include('../includes/config.php');
+include_once('../includes/auth.php');
 include('../includes/functions.php');
 
 $error = $_SESSION['error'] ?? ''; 
@@ -39,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['role']    = $user['role'];
             
             // Redirect based on role
-            header("Location: " . ($user['role'] === 'admin' ? "/bobmart/item/index.php" : "/bobmart/item/shop.php"));
+            header("Location: " . role_home($user['role']));
             exit;
         }
     }
@@ -97,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div style="text-align: center; margin-top: 20px;">
             <a href="register.php" style="color: #38bdf8; text-decoration: none; font-size: 14px;">Don't have an account? Register here</a>
         </div>
+        <div style="text-align: center; margin-top: 12px;"><a href="/bobmart/item/shop.php" style="color: #38bdf8; text-decoration: none; font-size: 14px;">&larr; Back to Shop</a></div>
     </div>
 </body>
 </html>

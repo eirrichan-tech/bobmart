@@ -3,7 +3,7 @@ session_start();
 include('../includes/auth.php');
 include('../includes/config.php');
 require_once '../includes/mailer.php';
-require_admin();                              // customers can't open this page
+require_role(['order_staff']);                              // customers can't open this page
 
 if (!function_exists('e')) {
     function e($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
@@ -40,27 +40,17 @@ if (isset($_POST['update_status'])) {
 $res = mysqli_query($conn, "SELECT * FROM order_details_view ORDER BY created_at DESC, order_id DESC");
 $orders = [];
 while ($r = mysqli_fetch_assoc($res)) $orders[$r['order_id']][] = $r;
+include('../includes/header.php');
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Orders - Bobmart</title>
-    <link rel="stylesheet" href="../includes/estetik/style.css">
-    <style>
+<style>
         .msg-ok{color:#15803d;background:#dcfce7;padding:10px;border-radius:6px;margin-bottom:15px;font-size:14px}
         .msg-err{color:#be123c;background:#ffe4e6;padding:10px;border-radius:6px;margin-bottom:15px;font-size:14px}
         .dashboard-container .styled-table, .dashboard-container .styled-table td { color:#0f172a; }
         .dashboard-container .styled-table th { color:#0284c7; }
-        .page-wrap{max-width:1100px;margin:20px auto;padding:0 16px}
     </style>
-</head>
-<body>
-<div class="page-wrap">
 <div class="dashboard-container">
     <h2 class="header-title">Order Management</h2>
-    <p class="header-subtitle"><a href="../item/index.php">&larr; Back to Inventory</a></p>
+    <div class="back-row"><a href="../item/index.php" class="back-btn">&larr; Back to Inventory</a><a href="manage_users.php" class="back-btn">Users</a><a href="../item/shop.php" class="back-btn">View Shop</a></div>
 
     <?php if (isset($_SESSION['success'])): ?><div class="msg-ok"><?= e($_SESSION['success']); unset($_SESSION['success']); ?></div><?php endif; ?>
     <?php if (isset($_SESSION['error'])): ?><div class="msg-err"><?= e($_SESSION['error']); unset($_SESSION['error']); ?></div><?php endif; ?>
@@ -103,6 +93,4 @@ while ($r = mysqli_fetch_assoc($res)) $orders[$r['order_id']][] = $r;
     </table>
     </div>
 </div>
-</div>
-</body>
-</html>
+<?php include('../includes/footer.php'); ?>

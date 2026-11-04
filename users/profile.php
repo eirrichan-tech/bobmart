@@ -27,10 +27,13 @@ $profile_img = $user['profile_img'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name'] ?? '');
-    
-    // Server-side validation (Name length check)
+    $address = trim($_POST['address'] ?? '');   // NEW
+
+    // Server-side validation
     if (strlen($name) < 2) {
         $error = "Name must be at least 2 characters long.";
+    } elseif (strlen($address) < 10) {          // NEW
+        $error = "Please enter a complete address (at least 10 characters).";
     } else {
         $imgErrors = [];
         if (isset($_FILES['profile_img']) && $_FILES['profile_img']['error'] !== UPLOAD_ERR_NO_FILE) {
@@ -39,18 +42,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $profile_img = $saved[0];
             }
         }
-        
+
         if ($imgErrors) {
             $error = implode(' ', $imgErrors);
         } else {
-            // Prepared statement update using 'id'
-            $st = mysqli_prepare($conn, "UPDATE users SET name = ?, profile_img = ? WHERE id = ?");
-            mysqli_stmt_bind_param($st, "ssi", $name, $profile_img, $user_id);
+            // NEW: address added to the UPDATE and the bind types are now "sssi"
+            $st = mysqli_prepare($conn, "UPDATE users SET name = ?, address = ?, profile_img = ? WHERE id = ?");
+            mysqli_stmt_bind_param($st, "sssi", $name, $address, $profile_img, $user_id);
             mysqli_stmt_execute($st);
-            
+
             $_SESSION['name'] = $name;
             $msg = "Profile updated successfully!";
-            
+
             // Refresh user data array using 'id'
             $stmt = mysqli_prepare($conn, "SELECT * FROM users WHERE id = ?");
             mysqli_stmt_bind_param($stmt, "i", $user_id);
@@ -59,18 +62,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+include('../includes/header.php');
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><title>My Profile</title><link rel="stylesheet" href="../includes/estetik/style.css"></head>
-<body>
-    <div class="card-container" style="text-align: center;">
+<div class="card-container" style="max-width:700px;margin:auto;text-align:center">
+    <a href="/bobmart/item/shop.php" class="back-btn">&larr; Back to Shop</a>
         <h2 class="header-title">Customer Profile</h2>
         <?php if (!empty($msg)): ?><div style="color:#16a34a; background:#dcfce7; padding:10px; border-radius:6px; margin-bottom:15px; font-size:13px;"><?= e($msg) ?></div><?php endif; ?>
         <?php if (!empty($error)): ?><div style="color:#f43f5e; background:rgba(244,63,94,0.1); padding:10px; border-radius:6px; margin-bottom:15px; font-size:13px;"><?= e($error) ?></div><?php endif; ?>
-        
+
         <img src="/bobmart/<?= e($user['profile_img']) ?>" width="100" height="100" style="border-radius: 50%; object-fit: cover; margin-bottom: 15px;">
-        
+
         <form action="profile.php" method="POST" enctype="multipart/form-data" novalidate style="text-align: left;">
             <div class="form-group">
                 <label>Full Name</label>
@@ -80,6 +81,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label>Email</label>
                 <input type="text" value="<?= e($user['email']) ?>" disabled style="background:#e2e8f0;">
             </div>
+            <!-- NEW: saved shipping address -->
+            <div class="form-group">
+                <label>Shipping Address</label>
+                <textarea name="address" rows="3"><?= e($user['address'] ?? '') ?></textarea>
+            </div>
             <div class="form-group">
                 <label>New Profile Photo</label>
                 <input type="file" name="profile_img">
@@ -88,5 +94,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </form>
         <a href="logout.php" class="back-link" style="color: #ef4444;">Log Out</a>
     </div>
-</body>
-</html>
+<?php include('../includes/footer.php'); ?>

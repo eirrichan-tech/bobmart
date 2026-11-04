@@ -1,7 +1,7 @@
 <?php
 session_start();
 include('../includes/auth.php');
-require_admin(); // Protect editing for admins only
+require_role(['inventory_staff']); // Protect editing for admins only
 include('../includes/config.php');
 include('../includes/functions.php');
 
