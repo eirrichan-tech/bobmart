@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 03, 2026 at 10:17 AM
+-- Generation Time: Nov 04, 2026 at 05:45 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.5.10
 
@@ -136,7 +136,8 @@ INSERT INTO `orders` (`order_id`, `user_id`, `total_amount`, `status`, `created_
 (1, 1, 600.00, 'Shipped', '2026-10-27 03:29:47', ''),
 (2, 4, 450.00, 'Pending', '2026-11-03 03:20:55', '22A Sampaloc St., Purok 4, Lower Bicutan, Taguig City'),
 (3, 4, 1200.00, 'Pending', '2026-11-03 06:07:42', '22A sta ana'),
-(4, 11, 450.00, 'Delivered', '2026-11-03 09:03:11', '22A sta ana st');
+(4, 11, 450.00, 'Delivered', '2026-11-03 09:03:11', '22A sta ana st'),
+(5, 11, 600.00, 'Pending', '2026-11-04 02:16:39', '22A Sampaloc St., Purok 4, Lower Bicutan, Taguig City');
 
 -- --------------------------------------------------------
 
@@ -182,7 +183,8 @@ INSERT INTO `order_items` (`order_item_id`, `order_id`, `item_id`, `quantity`, `
 (1, 1, 1, 1, 600.00),
 (2, 2, 12, 1, 450.00),
 (3, 3, 15, 2, 600.00),
-(4, 4, 1, 1, 450.00);
+(4, 4, 1, 1, 450.00),
+(5, 5, 26, 1, 600.00);
 
 -- --------------------------------------------------------
 
@@ -249,7 +251,7 @@ INSERT INTO `stock` (`stock_id`, `item_id`, `quantity`, `stock_cases`) VALUES
 (24, 22, 20, 2),
 (25, 23, 20, 2),
 (26, 25, 20, 2),
-(27, 26, 112, 99);
+(27, 26, 111, 99);
 
 -- --------------------------------------------------------
 
@@ -261,6 +263,7 @@ CREATE TABLE `users` (
   `id` int(11) NOT NULL,
   `name` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
+  `address` varchar(255) NOT NULL DEFAULT '',
   `password` varchar(255) NOT NULL,
   `role` varchar(50) NOT NULL DEFAULT 'customer',
   `profile_img` varchar(255) DEFAULT 'images/default_user.jpg',
@@ -272,17 +275,18 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `profile_img`, `status`, `created_at`) VALUES
-(1, 'Admin User', 'admin@bobmart.com', '$2y$12$h2hG5Y5UL0dHm1SiIbgm7eGfcGWMsa6JuuKmkxGyAWWhfUnb7WRjC', 'admin', 'images/default_user.jpg', 'active', '2026-10-27 03:11:49'),
-(2, 'mark', 'lloren@yehey.com', '$2y$12$j2FTo0hbbuUuEvyvT6ND3.0wXWdsWyF3YElK5ZO26rQjtcAc7KVHa', 'customer', 'images/default_user.jpg', 'active', '2026-10-27 03:17:54'),
-(3, 'terd', 'terd@yehey.com', '$2y$12$bfE9BWLtA3fSwZ.WpcqZneUhODQz.QrdQstTsWjeYjK1Y538IWiQK', 'customer', 'images/default_user.jpg', 'deactivated', '2026-10-27 03:24:53'),
-(4, 'Eirrich Leonardo', 'eri@yehey.com', '$2y$12$1MC9wkoNPQO.S247kJcBbemLjLy2ULudniXI8xczBbF.528XuncWi', 'customer', 'images/default_user.jpg', 'active', '2026-11-02 15:36:17'),
-(5, 'Eri', 'eirrichan@yehey.com', '$2y$12$IPu/onGy4T04aK.kmZkwgez2GjDVq13aR8TJuZnBieWPJmDPBnU1S', 'customer', 'uploads/users/default.png', 'active', '2026-11-02 16:36:53'),
-(6, 'Eri', 'eirrich@yehey.com', '$2y$12$osfcuNs1wmrvXth2Zaq8/eHccJ59INPrwMAdJsUVoNOZduKbCYSv.', 'customer', 'uploads/users/6ae8bdbfd215a7.44016380.jpg', 'active', '2026-11-02 16:43:03'),
-(7, 'System Admin', 'admin2@bobmart.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'images/default_user.jpg', 'active', '2026-11-03 06:20:08'),
-(9, 'System Admin', 'admin3@bobmart.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'images/default_user.jpg', 'active', '2026-11-03 06:22:58'),
-(10, 'System Admin', 'admin4@bobmart.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'images/default_user.jpg', 'active', '2026-11-03 06:24:10'),
-(11, 'Andrea', 'sanestebans@yehey.com', '$2y$12$UyjFdc7J6FOM2.C8.ukZ5.omdmJ45hntwsePkE5sMAgiKn50XoJgu', 'customer', 'uploads/users/default.png', 'active', '2026-11-03 08:47:34');
+INSERT INTO `users` (`id`, `name`, `email`, `address`, `password`, `role`, `profile_img`, `status`, `created_at`) VALUES
+(1, 'Admin User', 'admin@bobmart.com', '', '$2y$12$h2hG5Y5UL0dHm1SiIbgm7eGfcGWMsa6JuuKmkxGyAWWhfUnb7WRjC', 'admin', 'images/default_user.jpg', 'active', '2026-10-27 03:11:49'),
+(2, 'mark', 'lloren@yehey.com', '', '$2y$12$j2FTo0hbbuUuEvyvT6ND3.0wXWdsWyF3YElK5ZO26rQjtcAc7KVHa', 'customer', 'images/default_user.jpg', 'active', '2026-10-27 03:17:54'),
+(3, 'terd', 'terd@yehey.com', '', '$2y$12$bfE9BWLtA3fSwZ.WpcqZneUhODQz.QrdQstTsWjeYjK1Y538IWiQK', 'customer', 'images/default_user.jpg', 'deactivated', '2026-10-27 03:24:53'),
+(4, 'Eirrich Leonardo', 'eri@yehey.com', '', '$2y$12$1MC9wkoNPQO.S247kJcBbemLjLy2ULudniXI8xczBbF.528XuncWi', 'customer', 'images/default_user.jpg', 'active', '2026-11-02 15:36:17'),
+(5, 'Eri', 'eirrichan@yehey.com', '', '$2y$12$IPu/onGy4T04aK.kmZkwgez2GjDVq13aR8TJuZnBieWPJmDPBnU1S', 'customer', 'uploads/users/default.png', 'active', '2026-11-02 16:36:53'),
+(6, 'Eri', 'eirrich@yehey.com', '', '$2y$12$osfcuNs1wmrvXth2Zaq8/eHccJ59INPrwMAdJsUVoNOZduKbCYSv.', 'customer', 'uploads/users/6ae8bdbfd215a7.44016380.jpg', 'active', '2026-11-02 16:43:03'),
+(7, 'System Admin', 'admin2@bobmart.com', '', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'images/default_user.jpg', 'active', '2026-11-03 06:20:08'),
+(9, 'System Admin', 'admin3@bobmart.com', '', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'images/default_user.jpg', 'active', '2026-11-03 06:22:58'),
+(10, 'System Admin', 'admin4@bobmart.com', '', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'images/default_user.jpg', 'active', '2026-11-03 06:24:10'),
+(11, 'Andrea', 'sanestebans@yehey.com', '', '$2y$12$UyjFdc7J6FOM2.C8.ukZ5.omdmJ45hntwsePkE5sMAgiKn50XoJgu', 'customer', 'uploads/users/default.png', 'active', '2026-11-03 08:47:34'),
+(12, 'Eri', 'eirriches@yehey.com', '22A Sampaloc St., Purok 4, Lower Bicutan, Taguig City', '$2y$12$50yAka2gR1yVtRa.fkDiB.kNbR0L43QyYUmXI73d3VVsgAKd3RNzO', 'customer', 'uploads/users/default.png', 'active', '2026-11-04 02:37:35');
 
 -- --------------------------------------------------------
 
@@ -380,13 +384,13 @@ ALTER TABLE `item_images`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `order_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `order_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `reviews`
@@ -404,7 +408,7 @@ ALTER TABLE `stock`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- Constraints for dumped tables
